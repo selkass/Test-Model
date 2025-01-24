@@ -1,0 +1,87 @@
+import pandas as pd
+
+# Load the dataset
+df = pd.read_csv("census.csv")
+
+# Question 1: How many people of each race are represented?
+race_counts = df["race"].value_counts().sort_values(ascending=False)
+
+# Question 2: What is the average age of men?
+average_male_age = df[df["sex"] == "Male"]["age"].mean().round(1)
+
+# Question 3: What percentage of people have a Bachelor's degree?
+bachelors_degree_percent = (
+    (df["education"] == "Bachelors").mean() * 100
+).round(1)
+
+# Question 4: Percentage of advanced education earners making more than 50K
+advanced_education = df[
+    df["education"].isin(["Bachelors", "Masters", "Doctorate"])
+]
+advanced_education_gt_50k_percent = (
+    (advanced_education["salary"] == ">50K").mean() * 100
+).round(1)
+
+# Question 5: Percentage of non-advanced education earners making more than 50K
+non_advanced_education = df[
+    ~df["education"].isin(["Bachelors", "Masters", "Doctorate"])
+]
+non_advanced_education_gt_50k_percent = (
+    (non_advanced_education["salary"] == ">50K").mean() * 100
+).round(1)
+
+# Question 6: Minimum number of hours worked per week
+min_work_hours = df["hours-per-week"].min()
+
+# Question 7: Percentage earning >50K working minimum hours, by country
+min_hours_df = df[df["hours-per-week"] == min_work_hours]
+min_hours_gt_50k_per_country = (
+    min_hours_df[min_hours_df["salary"] == ">50K"]
+    .groupby("native-country")
+    .size()
+    .to_frame(name="count")
+    .reset_index()
+    .merge(min_hours_df.groupby("native-country").size().to_frame(name="total"), on="native-country")
+    .assign(percent=(lambda x: (x["count"] / x["total"]) * 100))
+    .sort_values(by="percent", ascending=False)
+    .head(1)
+)
+
+# Handle cases where no one works minimum hours in a country
+if min_hours_gt_50k_per_country.empty:
+    percent = 0
+    country = "None"
+else:
+    percent = min_hours_gt_50k_per_country["percent"].values[0].round(1)
+    country = min_hours_gt_50k_per_country["native-country"].values[0]
+
+# Question 8: Most popular occupation for >50K earners in India
+india_gt_50k = df[(df["salary"] == ">50K") & (df["native-country"] == "India")]
+india_gt_50k_occupation = india_gt_50k["occupation"].mode().values[0]
+
+# Print the answers
+print("Race counts:")
+print(race_counts)
+print("\nAverage age of men:")
+print(average_male_age)
+print("\nPercentage with Bachelor's degree:")
+print(bachelors_degree_percent, "%")
+print(
+    "\nPercentage of advanced education earners making more than 50K:",
+    advanced_education_gt_50k_percent,
+    "%",
+)
+print(
+    "\nPercentage of non-advanced education earners making more than 50K:",
+    non_advanced_education_gt_50k_percent,
+    "%",
+)
+print("\nMinimum work hours per week:", min_work_hours)
+print(
+    "\nPercentage earning >50K working minimum hours in",
+    country,
+    ":",
+    percent,
+    "%",
+)
+print("\nMost popular occupation for >50K earners in India:", india_gt_50k_occupation)
